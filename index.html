@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>
+            * {
+                text-align: center;
+            }
+            body {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 50px;
+                font-family: 'Inter', sans-serif;
+                background-color: #f3f4f6;
+            }
+            .div-button {
+                background: none;
+                border: none;
+                padding: 0;
+                cursor: pointer;
+                margin: 18px;
+            }
+            #list-of-images,
+            #list-of-movies {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 20px;
+                padding: 20px;
+            }
+            .object-image,
+            .list-image {
+                width: 150px;
+                height: auto;
+            }
+            .caption {
+                font-size: small;
+                color: darkslategray;
+                font-style: italic;
+            }
+
+            div {
+                margin: 15px;
+            }
+        </style>
+        <title>Cinemage</title>
+    </head>
+    <body>
+        <h1>Cinemage</h1>
+        <p>Get it? It's "cinema" and "image" together...</p>
+        <div>
+            <h3>Upload an Image</h3>
+            <p>Upload local image files to an S3 bucket.</p>
+            <form id="form">
+                <input
+                    id="file-input"
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                />
+                <button id="upload-btn" type="submit">Upload</button>
+            </form>
+        </div>
+        <div>
+            <h3>Movie Posters</h3>
+            <p>See what movies posters are already in an S3 bucket.</p>
+            <button id="get-images-btn">Get Posters</button>
+            <div id="list-of-images"></div>
+        </div>
+        <div>
+            <h3>Movies</h3>
+            <p>
+                See what movies are in the database and upload the posters to an
+                S3 bucket.
+            </p>
+            <button id="get-movies-btn">Get Movies</button>
+            <div id="list-of-movies"></div>
+        </div>
+        <script>
+            // Upload image file to S3 bucket
+            const uploadImage = () => {
+                const file = document.getElementById('file-input').files[0];
+
+                // Create form data for fetch
+                const formData = new FormData();
+                formData.append('image', file);
+
+                fetch('http://localhost:3000/upload', {
+                    method: 'POST',
+                    body: formData,
+                }).then((response) => {
+                    if (!response.ok)
+                        return res.status(500).json({
+                            status: 'Server Error',
+                        });
+                    console.log('Response:', response);
+                });
+            };
+
+            // Submit image for upload
+            const form = document.getElementById('form');
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                uploadImage();
+            });
+
+            // Get list of images in S3 bucket
+            const getImagesBtn = document.getElementById('get-images-btn');
+            getImagesBtn.addEventListener('click', () => {
+                const listOfImagesContainer =
+                    document.getElementById('list-of-images');
+
+                let urls;
+                fetch('http://localhost:3000/images')
+                    .then((response) => response.json())
+                    .then((data) => {
+                        urls = data.urls;
+
+                        for (i = 0; i < urls.length; i++) {
+                            const objectContainer =
+                                document.createElement('div');
+                            objectContainer.classList.add('object-container');
+
+                            const imageElement = document.createElement('img');
+                            imageElement.src = urls[i].url;
+                            imageElement.classList.add('object-image');
+
+                            const captionElement = document.createElement('p');
+                            captionElement.classList.add('caption');
+                            captionElement.innerText = urls[i].caption;
+
+                            objectContainer.append(imageElement);
+                            objectContainer.append(captionElement);
+
+                            listOfImagesContainer.append(objectContainer);
+                        }
+                    })
+                    .catch((error) => console.error(error));
+            });
+
+            // GET movies from database
+            const getMoviesBtn = document.getElementById('get-movies-btn');
+            getMoviesBtn.addEventListener('click', () => {
+                fetch('http://localhost:3000/movies')
+                    .then((res) => res.json())
+                    .then((movies) => {
+                        for (i = 0; i < movies.length; i++) {
+                            const movie = movies[i];
+
+                            const movieList =
+                                document.getElementById('list-of-movies');
+
+                            const divButton = document.createElement('button');
+                            divButton.classList.add('div-button');
+                            divButton.addEventListener('click', (event) => {
+                                fetch(
+                                    `http://localhost:3000/upload/${encodeURIComponent(
+                                        movie.poster
+                                    )}`,
+                                    {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            title: movie.title,
+                                        }),
+                                    }
+                                ).then((res) => console.log(res));
+                            });
+
+                            const imageElement = document.createElement('img');
+                            imageElement.src = movie.poster;
+                            imageElement.classList.add('list-image');
+
+                            const captionElement = document.createElement('p');
+                            captionElement.classList.add('caption');
+                            captionElement.innerText = `${movie.title} directed by ${movie.director}`;
+
+                            divButton.append(imageElement);
+                            divButton.append(captionElement);
+
+                            movieList.append(divButton);
+                        }
+                    })
+                    .catch((error) => console.error(error));
+            });
+
+            const getMovies = () => {
+                fetch('http://localhost:3000/movies')
+                    .then((res) => res.json())
+                    .then((movies) => console.log('Movies from fetch', movies))
+                    .catch((error) => console.error(error));
+            };
+        </script>
+    </body>
+</html>
