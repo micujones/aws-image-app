@@ -64,20 +64,13 @@
         </div>
         <div>
             <h3>Movie Posters</h3>
-            <p>See what movies posters are already in an S3 bucket.</p>
+            <p>See what movie posters are already in the S3 bucket.</p>
             <button id="get-images-btn">Get Posters</button>
             <div id="list-of-images"></div>
         </div>
-        <div>
-            <h3>Movies</h3>
-            <p>
-                See what movies are in the database and upload the posters to an
-                S3 bucket.
-            </p>
-            <button id="get-movies-btn">Get Movies</button>
-            <div id="list-of-movies"></div>
-        </div>
         <script>
+            const currentUrl = window.location.href;
+
             // Upload image file to S3 bucket
             const uploadImage = () => {
                 const file = document.getElementById('file-input').files[0];
@@ -86,7 +79,7 @@
                 const formData = new FormData();
                 formData.append('image', file);
 
-                fetch('http://localhost:3000/upload', {
+                fetch(currentUrl + 'upload', {
                     method: 'POST',
                     body: formData,
                 }).then((response) => {
@@ -112,10 +105,18 @@
                     document.getElementById('list-of-images');
 
                 let urls;
-                fetch('http://localhost:3000/images')
+                fetch(currentUrl + 'images')
                     .then((response) => response.json())
                     .then((data) => {
                         urls = data.urls;
+
+                        if (document.querySelector('.object-container')) {
+                            const listOfImages =
+                                document.querySelectorAll('.object-container');
+                            listOfImages.forEach((container) =>
+                                container.remove()
+                            );
+                        }
 
                         for (i = 0; i < urls.length; i++) {
                             const objectContainer =
@@ -138,61 +139,6 @@
                     })
                     .catch((error) => console.error(error));
             });
-
-            // GET movies from database
-            const getMoviesBtn = document.getElementById('get-movies-btn');
-            getMoviesBtn.addEventListener('click', () => {
-                fetch('http://localhost:3000/movies')
-                    .then((res) => res.json())
-                    .then((movies) => {
-                        for (i = 0; i < movies.length; i++) {
-                            const movie = movies[i];
-
-                            const movieList =
-                                document.getElementById('list-of-movies');
-
-                            const divButton = document.createElement('button');
-                            divButton.classList.add('div-button');
-                            divButton.addEventListener('click', (event) => {
-                                fetch(
-                                    `http://localhost:3000/upload/${encodeURIComponent(
-                                        movie.poster
-                                    )}`,
-                                    {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            title: movie.title,
-                                        }),
-                                    }
-                                ).then((res) => console.log(res));
-                            });
-
-                            const imageElement = document.createElement('img');
-                            imageElement.src = movie.poster;
-                            imageElement.classList.add('list-image');
-
-                            const captionElement = document.createElement('p');
-                            captionElement.classList.add('caption');
-                            captionElement.innerText = `${movie.title} directed by ${movie.director}`;
-
-                            divButton.append(imageElement);
-                            divButton.append(captionElement);
-
-                            movieList.append(divButton);
-                        }
-                    })
-                    .catch((error) => console.error(error));
-            });
-
-            const getMovies = () => {
-                fetch('http://localhost:3000/movies')
-                    .then((res) => res.json())
-                    .then((movies) => console.log('Movies from fetch', movies))
-                    .catch((error) => console.error(error));
-            };
         </script>
     </body>
 </html>
